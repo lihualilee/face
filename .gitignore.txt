@@ -1,0 +1,4 @@
+logs1/*.txt
+*.txt
+b.txt
+
