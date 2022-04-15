@@ -1,3 +1,6 @@
 logs1/*.txt
 b.txt
 data/
+model_data/
+logs/
+*.md
