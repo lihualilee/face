@@ -37,6 +37,23 @@ class LossHistory():
         self.writer.add_scalar('loss', loss, epoch)
         self.loss_plot()
 
+    def append_resume_loss(self,txt_path):
+        if not os.path.exists(self.log_dir):
+            os.makedirs(self.log_dir)
+
+        with open(txt_path, "r") as f1:
+            for epoch,line in enumerate(f1.readlines()):
+                loss = float(line.strip('\n'))
+
+                self.losses.append(loss)
+
+                with open(os.path.join(self.log_dir, "epoch_loss.txt"), 'a') as f:
+                    f.write(str(loss))
+                    f.write("\n")
+
+                self.writer.add_scalar('loss', loss, epoch+1)
+                self.loss_plot()
+
     def loss_plot(self):
         iters = range(len(self.losses))
 

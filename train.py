@@ -247,6 +247,16 @@ if __name__ == "__main__":
         list 
         '''
         epoch_step      = train_dataset.get_len() // batch_size
+        resume = False
+        if resume:
+            model_path = ''
+            print('Load resume weights {}.'.format(model_path))
+            device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+            pretrained_dict = torch.load(model_path, map_location=device)
+            model.load_state_dict(pretrained_dict)
+            loss_txt_path = ''
+            loss_history.append_resume_loss(loss_txt_path)
+            Init_Epoch = int(model_path.split('-')[0][5:]) + 1
 
         #   开始模型训练
         for epoch in range(Init_Epoch, UnFreeze_Epoch):

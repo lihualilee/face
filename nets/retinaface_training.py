@@ -315,6 +315,7 @@ class MultiBoxLoss(nn.Module):
         _, idx_rank = loss_idx.sort(1)
 
         # 得到每一个网格的分类输出对应的排序索引
+        # 【b,16800】
 
         #   求和得到每一个图片内部有多少正样本
         #   num_pos     (num, )
@@ -322,30 +323,49 @@ class MultiBoxLoss(nn.Module):
         num_pos = pos.long().sum(1, keepdim=True)
         # [b, 16800]
         # 统计每一张图片中所对应的正样本目标的数量
-        # [b,1] 里面的值是正样本目标的数量
+        # [b,1] 里面的值是每张图片中正样本目标的数量
 
         # 限制负样本数量
         num_neg = torch.clamp(self.negpos_ratio*num_pos, max=pos.size(1)-1)
+        # [b,1]*7倍,正样本目标的数量上限是先验框的数量-1个,正样本的数量不可能超过先验框目标的数量
+        # 若为N1,N2,.....Nb的数值
         neg = idx_rank < num_neg.expand_as(idx_rank)
+        # [b,1] 正样本目标的数量----------->[n,16800]
+        #  [b,16800] < [b,16800]  顺序1小于N1那么该目标可以当做为较难的负样本
+        # [B,16800] 是否为难例负样本的mask图
 
         #   求和得到每一个图片内部有多少正样本
         #   pos_idx   (num, num_priors, num_classes)
         #   neg_idx   (num, num_priors, num_classes)
         pos_idx = pos.unsqueeze(2).expand_as(conf_data)
+        # 正样本分类损失掩码图,T/F状态
+        # [b,16800]---->[b,16800,1]------->[b,16800,2]
         neg_idx = neg.unsqueeze(2).expand_as(conf_data)
-        
+        # 负样本分类损失掩码图
+        # [b,16800]---->[b,16800,1]------->[b,16800,2]
+
         # 选取出用于训练的正样本与负样本，计算loss
         conf_p = conf_data[(pos_idx+neg_idx).gt(0)].view(-1,self.num_classes)
+        '''
+        状态掩码图之和大于0的那些得到最终的正负样本所有的掩码图,you掩码图保存最终的政最终目标
+        '''
         targets_weighted = conf_t[(pos+neg).gt(0)]
         loss_c = F.cross_entropy(conf_p, targets_weighted, reduction='sum')
+        # 分类交叉熵损失
+
+        # 损失的均衡环节
 
         N = max(num_pos.data.sum().float(), 1)
         loss_l /= N
         loss_c /= N
+        # cls pos -1/1 reg -1/1
 
         num_pos_landm = pos1.long().sum(1, keepdim=True)
         N1 = max(num_pos_landm.data.sum().float(), 1)
         loss_landm /= N1
+        # key point 1
+
+        # 对正样本的数量进行归一化处理
         return loss_l, loss_c, loss_landm
 
 
